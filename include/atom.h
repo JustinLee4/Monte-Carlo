@@ -57,7 +57,7 @@ class Atom {
 class Water: public Atom {
     public:
     bool value = false;
-    bool isOverlapping;
+    bool isOverlapping = false;
 
 
     Water(std::array<double, 3> init_position, double init_b_factor = 0.0) 

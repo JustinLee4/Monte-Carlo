@@ -191,43 +191,6 @@ std::tuple<std::vector<Water>, double, double, double, double, double, double> p
 
 //-------------------------------------------
 
-void vectortopdb(const std::vector<Atom> &atomvector, std::string output_filename) {
-    std::vector<Atom> output;
-    std::ofstream out_file;
-    out_file.open(output_filename);
-    out_file << std::fixed;
-    out_file << std::setprecision(3);
-
-    // out_file << "REMARK  total number of initial water molecules = " << N << "\n"
-            //  << "REMARK  total remaining water molecules = " << k << "\n";
-
-    for(int i = 0; i < atomvector.size(); i++) {
-        std::array<double, 3> pos = atomvector[i].getCoords();
-        int z = i + 1;
-        if( z > 9999) {
-            z = 9999;
-        }
-
-        out_file << "HETATM"
-         << std::setw(5) << std::right << z        // Col 7-11
-         << " "                                         // Col 12
-         << " O  "                                      // Col 13-16 (Atom Name)
-         << " "                                         // Col 17
-         << "HOH"                                       // Col 18-20 (ResName)
-         << " "                                         // Col 21
-         << "A"                                         // Col 22 (Chain)
-         << std::setw(4) << std::right << z        // Col 23-26 (ResSeq)
-         << "    "                                      // Col 27-30
-         << std::setw(8) << std::fixed << std::right << pos[0] // X
-         << std::setw(8) << std::fixed << std::right << pos[1] // Y
-         << std::setw(8) << std::fixed << std::right << pos[2] // Z
-         << std::setw(6) << "1.00"                      // Occ
-         << std::setw(6) << "0.00"                      // Temp
-         << "          "                                // Spacing
-         << " O" << "\n";                               // Element
-    }   
-    out_file.close();
-}
 
 
 

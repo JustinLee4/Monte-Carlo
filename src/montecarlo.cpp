@@ -6,15 +6,17 @@
 #include <tuple>
 #include <cmath>
 
-void iterate_singly(std::vector<Water> &input_vec) {
+void iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices) {
     std::random_device rd;
     std::mt19937 gen(rd()); 
-    std::uniform_int_distribution<int> distrib(0, input_vec.size());
+    std::uniform_int_distribution<int> distrib(0, indices.size());
 
     // 5. Generate and print the random number
     int random_num = distrib(gen);
-    bool old_value = input_vec[random_num].get_value();
-    input_vec[random_num].set_value(!old_value);
+
+    int index = indices[random_num];
+    bool old_value = input_vec[index].get_value();
+    input_vec[index].set_value(!old_value);
 }
 
 

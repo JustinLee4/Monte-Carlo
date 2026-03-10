@@ -9,17 +9,15 @@
 
 
 bool linux = true;
-int total_reps = 100000;
+int total_reps = 100;
 
 int main(int argc, char* argv[]){
 
     double lowest_energy = INFINITY;
     double total_energy = 0;
-    std::vector<Water> lowest_config;
+    std::vector<std::tuple<int, std::vector<Water>>> lowest_config_cluster;
     bool accepted;
-    size_t N,k;
-    std::string monte_carlo_output_file;
-    std::ofstream monte_carlo_output;
+    std::ofstream monte_carlo_log_output;
     double hash_spacing = 10.0;
 
     // input handling
@@ -192,7 +190,9 @@ int main(int argc, char* argv[]){
     }
     
     for (int cluster_id : clusters) {
-        if (cluster_map.find(cluster_id) != cluster_map.end()) {        
+        if (cluster_map.find(cluster_id) != cluster_map.end()) { 
+            monte_carlo_log_output.open(output_file + "_" + std::to_string(cluster_id) + ".log");
+            lowest_energy = INFINITY;       
             std::vector<int> current_cluster = {};
             int check = 0;
 
@@ -201,13 +201,58 @@ int main(int argc, char* argv[]){
                 check++;
                 current_cluster.push_back(index);  
             }
-            std::cout<< "there are " << check << " waters" << std::endl;
+            std::cout<< "* there are " << check << " waters" << std::endl;
+            std::vector<Water> temp_lowest_vector(check, Water({0.0, 0.0, 0.0}));
 
-            //Montecarlo goes here
+            std::cout<< "current_cluster size = " << current_cluster.size() << std::endl;
+            std::cout << "temp_lowest_vector reserved size = " << temp_lowest_vector.size() << std::endl;
 
+
+            for(int i = 0; i < total_reps; i++) {
+                //montecarlo randomization
+                iterate_singly(watervector_energy, current_cluster);
+                
+
+                //calculate energy of configuration
+                total_energy = 0;
+                // std::cout << total_energy << " ";
+                for (int j = current_cluster[0]; j < (current_cluster[0] + current_cluster.size()); j++){
+                    if (watervector_energy[j].get_value() == 1) {
+                        if(watervector_energy[j].getOverlap()){
+                            total_energy += 10;
+                        } else {
+                            total_energy += watervector_energy[j].get_bfactor();
+                            // total_energy += watervector_energy[i].constructive_interaction();
+                            // if(watervector[i].constructive_interaction()!=0){
+                            //     std::cout << "UH OH" << std::endl;
+                            // }
+                        }
+                    }
+                }
+
+
+                //metropolis
+                auto[temp, accepted] = metropolis(total_energy, lowest_energy);
+                lowest_energy = temp;
+                
+                if(accepted) {
+                    std::copy(watervector_energy.begin() + current_cluster[0], watervector_energy.begin() + current_cluster[0] + current_cluster.size(), temp_lowest_vector.begin());
+                }
+
+                monte_carlo_log_output << i << ", " << total_energy << ", " << lowest_energy << "\n";
+
+
+            }
+
+            lowest_config_cluster.push_back({cluster_id, temp_lowest_vector});
+            monte_carlo_log_output.close();
+            for(int i = 0; i < clusters.size(); i++) {
+                std::cout << "lowest_config_cluster size = " << std::get<1>(lowest_config_cluster[i]).size() << std::endl;
+                vectortopdb(std::get<1>(lowest_config_cluster[i]), output_file + "_" + std::to_string(std::get<0>(lowest_config_cluster[i])) + ".pdb", cluster_id);
+            }
         }
+        
     }
-    std::cout << "-> Entering loop" << std::endl;
 
     //from here we are randomizing
     // for(int z = 0; z < total_reps; z++) {
