@@ -71,7 +71,7 @@ std::unordered_map<int, std::vector<int>> buildClusterMap(const std::vector<T>& 
 
 void printSpatialGrid(const std::unordered_map<GridKey, std::vector<int>>& grid);
 
-bool getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& grid, std::vector<Atom>& atomvector, std::array<double,3> target, double gridCellSize, double diameter, double cutoff_dist);
+void getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& grid, std::vector<Water>& Watervector, Water target, double gridCellSize, double diameter);
 
 void testGrid();
 

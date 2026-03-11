@@ -3,13 +3,15 @@
 #include "montecarlo.h"
 #include "map.h"
 
+#include <random>
+
 
 #include <iostream>
 #include <cstdio>
 
 
 bool linux = true;
-int total_reps = 100;
+int total_reps = pow(10, 3);
 
 int main(int argc, char* argv[]){
 
@@ -19,6 +21,8 @@ int main(int argc, char* argv[]){
     bool accepted;
     std::ofstream monte_carlo_log_output;
     double hash_spacing = 10.0;
+    std::random_device rd;
+    std::mt19937 gen(rd());
 
     // input handling
 
@@ -77,33 +81,28 @@ int main(int argc, char* argv[]){
         bool has_positive = false;
         bool has_negative = false;
 
-        // Read integers
         while (ss >> num) {
             parsed_nums.push_back(num);
             if (num > 0) has_positive = true;
             if (num < 0) has_negative = true;
         }
 
-        // Validation 1: Mixed inputs
         if (has_positive && has_negative) {
             std::cout << "Error: Cannot mix positive and negative cluster numbers. Please try again.\n";
             continue;
         }
         
-        // Validation 2: No valid numbers
         if (parsed_nums.empty()) {
             std::cout << "Invalid input. Please enter valid numbers.\n";
             continue;
         }
 
-        // Save the rules!
         is_exclude_mode = has_negative;
         for (int parsed_num : parsed_nums) {
-            // Store the absolute value so we just have a clean list of target IDs
             input_clusters.push_back(std::abs(parsed_num)); 
         }
         
-        break; // Successfully got the rules, exit the loop
+        break;
     }
 
 
@@ -127,6 +126,7 @@ int main(int argc, char* argv[]){
         }
     }
 
+    auto start_time = std::chrono::high_resolution_clock::now();
 
     //------------------------------------------------------
     //calculate energy for all gridpoints (without water-water interaction)
@@ -168,6 +168,15 @@ int main(int argc, char* argv[]){
     //create hashmap based on clusters - to loop through
     std::unordered_map<int, std::vector<int>> cluster_map = buildClusterMap(watervector_cluster);
 
+
+    //use overlap hashmap to populate neighbors for all gridpoints
+    for (Water water : watervector_energy) {
+        getOverlap_cluster(distance_map, watervector_energy, water, hash_spacing, 2.5);
+    }
+
+
+
+
     //--------------------------------------------------------
     std::vector<int> clusters;
 
@@ -191,7 +200,7 @@ int main(int argc, char* argv[]){
     
     for (int cluster_id : clusters) {
         if (cluster_map.find(cluster_id) != cluster_map.end()) { 
-            monte_carlo_log_output.open(output_file + "_" + std::to_string(cluster_id) + ".log");
+            monte_carlo_log_output.open(output_file + "_cluster_" + std::to_string(cluster_id) + ".log");
             lowest_energy = INFINITY;       
             std::vector<int> current_cluster = {};
             int check = 0;
@@ -201,17 +210,18 @@ int main(int argc, char* argv[]){
                 check++;
                 current_cluster.push_back(index);  
             }
-            std::cout<< "* there are " << check << " waters" << std::endl;
+            std::cout<< "* there are " << check << " waters in this cluster" << std::endl;
             std::vector<Water> temp_lowest_vector(check, Water({0.0, 0.0, 0.0}));
 
-            std::cout<< "current_cluster size = " << current_cluster.size() << std::endl;
-            std::cout << "temp_lowest_vector reserved size = " << temp_lowest_vector.size() << std::endl;
-
-
-            for(int i = 0; i < total_reps; i++) {
+            int rep_count = 0;
+            while(rep_count < total_reps){
                 //montecarlo randomization
-                iterate_singly(watervector_energy, current_cluster);
-                
+                bool addcount = iterate_singly(watervector_energy, current_cluster, gen);
+                if (!addcount)
+                {
+                    continue;
+                }
+                rep_count++;
 
                 //calculate energy of configuration
                 total_energy = 0;
@@ -239,17 +249,21 @@ int main(int argc, char* argv[]){
                     std::copy(watervector_energy.begin() + current_cluster[0], watervector_energy.begin() + current_cluster[0] + current_cluster.size(), temp_lowest_vector.begin());
                 }
 
-                monte_carlo_log_output << i << ", " << total_energy << ", " << lowest_energy << "\n";
+                monte_carlo_log_output << rep_count << ", " << total_energy << ", " << lowest_energy << "\n";
 
-
+                if (rep_count % 1000 == 0 || rep_count == total_reps - 1) {
+                    double percent = ((double)(rep_count + 1) / total_reps) * 100.0;
+                    std::cout << "\r\033[K  Progress:  " << std::fixed << std::setprecision(1) << percent << "%" << std::flush;                }
             }
+            std::cout << std::endl;
 
             lowest_config_cluster.push_back({cluster_id, temp_lowest_vector});
             monte_carlo_log_output.close();
             for(int i = 0; i < clusters.size(); i++) {
-                std::cout << "lowest_config_cluster size = " << std::get<1>(lowest_config_cluster[i]).size() << std::endl;
-                vectortopdb(std::get<1>(lowest_config_cluster[i]), output_file + "_" + std::to_string(std::get<0>(lowest_config_cluster[i])) + ".pdb", cluster_id);
+                vectortopdb(std::get<1>(lowest_config_cluster[i]), output_file + "_cluster_" + std::to_string(std::get<0>(lowest_config_cluster[i])) + ".pdb", cluster_id);
             }
+
+            std::cout << "energy of lowest configuration for cluster " << cluster_id << " is " << lowest_energy << std::endl;
         }
         
     }
@@ -325,6 +339,22 @@ int main(int argc, char* argv[]){
     // vectortopdb(lowest_config,output_file,N,k,false);
 
     // monte_carlo_output.close();
+
+        //--------- timer ----------
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end_time - start_time;
+
+    long long total_seconds = static_cast<long long>(elapsed.count());
+    long long hours = total_seconds / 3600;
+    long long minutes = (total_seconds % 3600) / 60;
+    long long seconds = total_seconds % 60;
+
+    std::cout << "Time: " 
+          << std::setfill('0') << std::setw(2) << hours << ":"
+          << std::setfill('0') << std::setw(2) << minutes << ":"
+          << std::setfill('0') << std::setw(2) << seconds 
+          << std::endl;
+
 
     return 1;
 }

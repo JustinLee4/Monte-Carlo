@@ -56,16 +56,11 @@ void printSpatialGrid(const std::unordered_map<GridKey, std::vector<int>>& grid)
 
 
 //find overlaps and also update nearest neighbors
-bool getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& grid, std::vector<Atom>& Atomvector, std::array<double,3> target, double gridCellSize, double diameter, double cutoff_dist) {
-
-    double cutoff_dist_sq = (cutoff_dist * cutoff_dist);
-    double targetRadius = diameter / 2.0; 
+void getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& grid, std::vector<Water>& Watervector, Water target, double gridCellSize, double diameter) { 
 
 
     // 1. Get the center coordinates of the target particle
-    GridKey centerKey = getGridKey_pos(target, gridCellSize);
-
-    bool at_least_one_neighbor = false;
+    GridKey centerKey = getGridKey_pos(target.getCoords(), gridCellSize);
 
     // 2. Loop through X, Y, Z offsets (-1, 0, 1)
     for (int dx = -1; dx <= 1; dx++) {
@@ -89,32 +84,23 @@ bool getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& gri
                     
                     for (int neighborIndex : indices) {  
 
-                        std::array<double,3> origCoords = target;
-                        std::array<double,3> targetCoords = Atomvector[neighborIndex].getCoords();
+                        std::array<double,3> origCoords = target.getCoords();
+                        std::array<double,3> newCoords = Watervector[neighborIndex].getCoords();
 
                         double distance = 0;
-                        double dX = origCoords[0] - targetCoords[0];
-                        double dY = origCoords[1] - targetCoords[1];
-                        double dZ = origCoords[2] - targetCoords[2];
+                        double dX = origCoords[0] - newCoords[0];
+                        double dY = origCoords[1] - newCoords[1];
+                        double dZ = origCoords[2] - newCoords[2];
 
                         distance = (dX*dX) + (dY*dY) + (dZ*dZ);
 
-                        AtomParams params = getParams(Atomvector[neighborIndex].get_resname(), Atomvector[neighborIndex].get_atomname());
-                        double atomradius =  params.radius_aa;
-
-                        double collisionThreshold = targetRadius + atomradius;
-
-                        if(distance <= (collisionThreshold * collisionThreshold)) {
-                            return false;
-                        }
-                        if (distance <= cutoff_dist_sq) {
-                            at_least_one_neighbor = true;
+                        if (distance <= pow(diameter,2)){
+                            target.add_neighbor(Watervector[neighborIndex]);
                         }
                     }
                 }
             } 
         }
     }
-    return at_least_one_neighbor;
 }
 

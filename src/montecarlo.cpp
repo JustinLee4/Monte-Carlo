@@ -1,3 +1,5 @@
+#define _USE_MATH_DEFINES
+
 #include "montecarlo.h"
 
 #include <random>
@@ -5,18 +7,29 @@
 #include <numeric>
 #include <tuple>
 #include <cmath>
+#include <math.h>
 
-void iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices) {
-    std::random_device rd;
-    std::mt19937 gen(rd()); 
-    std::uniform_int_distribution<int> distrib(0, indices.size());
+bool iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices, std::mt19937& gen) {
 
-    // 5. Generate and print the random number
+    std::uniform_int_distribution<int> distrib(0, indices.size()-1);
+
     int random_num = distrib(gen);
 
     int index = indices[random_num];
+
+    if(input_vec[index].getOverlap()) {
+        return false;
+    }
+
     bool old_value = input_vec[index].get_value();
     input_vec[index].set_value(!old_value);
+
+    if(!old_value){
+        input_vec[index].overlap_with_neighbors();
+    } else {
+        input_vec[index].remove_overlap_with_neighbors();
+    }
+    return true;
 }
 
 

@@ -58,6 +58,7 @@ class Water: public Atom {
     public:
     bool value = false;
     bool isOverlapping = false;
+    std::vector<Water> nearby_water = {};
 
 
     Water(std::array<double, 3> init_position, double init_b_factor = 0.0) 
@@ -73,6 +74,14 @@ class Water: public Atom {
     void setOverlap(bool new_isOverlapping);
 
     bool getOverlap() const;
+
+    void flip_Overlap();
+
+    void add_neighbor(Water newNeighbor);
+
+    void overlap_with_neighbors();
+
+    void remove_overlap_with_neighbors();
 };
 
 #endif

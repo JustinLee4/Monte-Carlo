@@ -6,8 +6,9 @@
 
 #include <iostream>
 #include <vector>
+#include <random>
 
-void iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices);
+bool iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices, std::mt19937& gen);
 
 std::tuple<std::vector<Water>,size_t,size_t> randomize_states(std::vector<Water> &input_vec);
 

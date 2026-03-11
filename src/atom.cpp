@@ -66,3 +66,23 @@ void Water::setOverlap(bool new_isOverlapping) {
 bool Water::getOverlap() const {
     return isOverlapping;
 }
+
+void Water::flip_Overlap() {
+    isOverlapping = !isOverlapping;
+}
+
+void Water::add_neighbor(Water newNeighbor){
+    nearby_water.push_back(newNeighbor);
+}
+
+void Water::overlap_with_neighbors(){
+    for (Water neighbor : nearby_water) {
+        neighbor.setOverlap(true);
+    }
+}
+
+void Water::remove_overlap_with_neighbors() {
+    for (Water neighbor : nearby_water) {
+        neighbor.setOverlap(false);
+    } 
+}
