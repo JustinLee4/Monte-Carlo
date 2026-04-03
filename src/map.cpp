@@ -21,11 +21,6 @@ GridKey getGridKey_pos(const std::array<double, 3> pos, double gridCellSize) {
     };
 }
 
-
-
-
-
-
 void printSpatialGrid(const std::unordered_map<GridKey, std::vector<int>>& grid) {
     
     std::cout << "--- Spatial Grid Contents ---" << std::endl;
@@ -56,7 +51,7 @@ void printSpatialGrid(const std::unordered_map<GridKey, std::vector<int>>& grid)
 
 
 //find overlaps and also update nearest neighbors
-void getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& grid, std::vector<Water>& Watervector, Water target, double gridCellSize, double diameter) { 
+void getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& grid, std::vector<Water>& Watervector, Water& target, double gridCellSize, double diameter) { 
 
 
     // 1. Get the center coordinates of the target particle
@@ -94,8 +89,8 @@ void getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& gri
 
                         distance = (dX*dX) + (dY*dY) + (dZ*dZ);
 
-                        if (distance <= pow(diameter,2)){
-                            target.add_neighbor(Watervector[neighborIndex]);
+                        if ((distance <= pow(diameter+0.01,2)) && (distance > 0.0001)){
+                            target.add_neighbor(neighborIndex);
                         }
                     }
                 }

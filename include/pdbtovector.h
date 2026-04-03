@@ -37,21 +37,13 @@ std::tuple<std::vector<Water>, double, double, double, double, double, double> p
 // void vectortopdb(const std::vector<Atom> &atomvector, std::string output_filename);
 template <typename T>
 void vectortopdb(const std::vector<T> &atomvector, 
-                std::string output_filename, 
-                int cluster_number) {
+                 std::ofstream &out_file,
+                 int cluster_number) {
 
+    
 
-    std::vector<Atom> output;
-    std::ofstream out_file;
-    out_file.open(output_filename);
-    out_file << std::fixed;
-    out_file << std::setprecision(3);
-
-    // out_file << "REMARK  total number of initial water molecules = " << N << "\n"
-            //  << "REMARK  total remaining water molecules = " << k << "\n";
 
     for(int i = 0; i < atomvector.size(); i++) {
-
         if(atomvector[i].get_value() == false) {
             continue;
         }
@@ -62,25 +54,28 @@ void vectortopdb(const std::vector<T> &atomvector,
             z = 9999;
         }
 
+        out_file << std::fixed;
+        out_file << std::setprecision(3);
+
         out_file << "HETATM"
          << std::setw(5) << std::right << z        // Col 7-11
-         << " "                                         // Col 12
-         << " O  "                                      // Col 13-16 (Atom Name)
-         << " "                                         // Col 17
-         << "HOH"                                       // Col 18-20 (ResName)
-         << " "                                         // Col 21
-         << "A"                                         // Col 22 (Chain)
+         << " "                                        // Col 12
+         << " O  "                                     // Col 13-16 (Atom Name)
+         << " "                                        // Col 17
+         << "HOH"                                      // Col 18-20 (ResName)
+         << " "                                        // Col 21
+         << "A"                                        // Col 22 (Chain)
          << std::setw(4) << std::right << cluster_number        // Col 23-26 (ResSeq)
-         << "    "                                      // Col 27-30
+         << "    "                                     // Col 27-30
          << std::setw(8) << std::fixed << std::right << pos[0] // X
          << std::setw(8) << std::fixed << std::right << pos[1] // Y
          << std::setw(8) << std::fixed << std::right << pos[2] // Z
          << std::setw(6) << "1.00"                    // Occ
-         << std::fixed << std::setprecision(2) << std::setw(6) << atomvector[i].get_bfactor()                     // Temp
-         << "          "                                // Spacing
+         << std::fixed << std::setprecision(2) << std::setw(6) << atomvector[i].get_bfactor() // Temp
+         << "          "                               // Spacing
          << " O" << "\n";                               // Element
     }   
-    out_file.close();
+    
 }
 
 

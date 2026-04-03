@@ -5,6 +5,67 @@
 #include <sstream>
 #include <array>
 #include <vector>
+#include <unordered_map>
+#include <random>
+
+
+class ActiveList {
+private:
+    std::vector<int> active_indices;
+    // Hash map maps arbitrary water_index -> position in active_indices array
+    std::unordered_map<int, int> position_in_list; 
+
+public:
+    // We no longer need to know the total water count in advance!
+    ActiveList() = default;
+
+    // Optional: If you know the approximate cluster size, reserving space prevents memory reallocations
+    void reserve(size_t expected_size) {
+        active_indices.reserve(expected_size);
+        position_in_list.reserve(expected_size);
+    }
+
+    void add(int index) {
+        // If the index is already in the map, do nothing
+        if (position_in_list.find(index) != position_in_list.end()) {
+            return; 
+        }
+        
+        active_indices.push_back(index);
+        position_in_list[index] = active_indices.size() - 1;
+    }
+
+    void remove(int index) {
+        // Find the index in the map
+        auto it = position_in_list.find(index);
+        if (it == position_in_list.end()) {
+            return; // Not in the list, nothing to remove
+        }
+
+        int pos = it->second;
+        int last_index = active_indices.back();
+        
+        // Swap the element we want to remove with the very last element in the vector
+        active_indices[pos] = last_index;
+        position_in_list[last_index] = pos; // Update the moved element's new position in the map
+
+        // Pop the back of the vector (O(1) removal)
+        active_indices.pop_back();
+        
+        // Completely erase the old index from the map
+        position_in_list.erase(it);
+    }
+
+    int get_random(std::mt19937& gen) const {
+        if (active_indices.empty()) return -1; // Simulation stuck / no valid moves
+        std::uniform_int_distribution<int> distrib(0, active_indices.size() - 1);
+        return active_indices[distrib(gen)];
+    }
+
+    bool is_empty() const { return active_indices.empty(); }
+    
+    size_t size() const { return active_indices.size(); }
+};
 
 class Atom {
     std::string resname;
@@ -57,8 +118,8 @@ class Atom {
 class Water: public Atom {
     public:
     bool value = false;
-    bool isOverlapping = false;
-    std::vector<Water> nearby_water = {};
+    int isOverlapping = 0;
+    std::vector<int> nearby_water = {};
 
 
     Water(std::array<double, 3> init_position, double init_b_factor = 0.0) 
@@ -71,17 +132,23 @@ class Water: public Atom {
 
     bool get_value() const;
 
-    void setOverlap(bool new_isOverlapping);
+    void setOverlap(int new_isOverlapping);
 
-    bool getOverlap() const;
+    int getOverlap() const;
 
-    void flip_Overlap();
+    void addOverlap();
 
-    void add_neighbor(Water newNeighbor);
+    void subtractOverlap();
 
-    void overlap_with_neighbors();
+    void clear_Overlap();
 
-    void remove_overlap_with_neighbors();
+    void add_neighbor(int newNeighbor);
+
+    void add_overlap_with_neighbors(std::vector<Water>& input_vec, ActiveList& active_list);
+
+    void subtract_overlap_with_neighbors(std::vector<Water>& input_vec, ActiveList& active_list);
+
 };
+
 
 #endif

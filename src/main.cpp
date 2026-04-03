@@ -11,7 +11,7 @@
 
 
 bool linux = true;
-int total_reps = pow(10, 3);
+int total_reps = pow(10, 6);
 
 int main(int argc, char* argv[]){
 
@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
     std::vector<std::tuple<int, std::vector<Water>>> lowest_config_cluster;
     bool accepted;
     std::ofstream monte_carlo_log_output;
-    double hash_spacing = 10.0;
+    double hash_spacing = 5.0;
     std::random_device rd;
     std::mt19937 gen(rd());
 
@@ -45,17 +45,20 @@ int main(int argc, char* argv[]){
         }
         else if ((arg == "-o" || arg == "--out") && i + 1 < argc) {
             output_file = std::string("results/") + argv[++i];
-        }         
+        }
+        else if ((arg == "-reps" ) && i + 1 < argc) {
+            total_reps = std::stod(argv[++i]);    
+        }     
         else {
             std::cerr << "Error: Unknown or incomplete argument '" << arg << "'" << std::endl;
-            std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out>" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out> -reps <total reps>" << std::endl;
             return 1;
         }
     }
 
     if ((input_protein_file.empty() || input_energy_file.empty() || input_cluster_file.empty() || output_file.empty())) {
         std::cerr << "Error: Missing required arguments" << std::endl;
-        std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out> -reps <total reps>" << std::endl;
         return 1;
     }
 
@@ -63,7 +66,7 @@ int main(int argc, char* argv[]){
     bool is_exclude_mode = false;   
 
     while (true) {
-        std::cout << "\nEnter clusters to process.\n"
+        std::cout << "\nEnter clusters to process. (space separated) \n"
                 << "Positive numbers include only those clusters.\n"
                 << "Negative numbers exclude those clusters.\n"
                 << "Input: ";
@@ -72,7 +75,9 @@ int main(int argc, char* argv[]){
         std::getline(std::cin, input);
 
         if (input.empty()) {
-            continue;
+            is_exclude_mode = true;
+            std::cout << "all clusters" << std::endl;
+            break;
         }
 
         std::stringstream ss(input);
@@ -111,6 +116,9 @@ int main(int argc, char* argv[]){
     std::cout << "Input energy file: " << input_energy_file << std::endl;
     std::cout << "Input cluster file: " << input_cluster_file << std::endl;
     std::cout << "Output:     " << output_file << std::endl;
+    std::cout << std::scientific;
+    std::cout <<  "Total steps:  " << static_cast<double>(total_reps) << std::endl;
+    std::cout << std::defaultfloat;
 
     std::string response;
     while (true) {
@@ -170,7 +178,7 @@ int main(int argc, char* argv[]){
 
 
     //use overlap hashmap to populate neighbors for all gridpoints
-    for (Water water : watervector_energy) {
+    for (Water& water : watervector_energy) {
         getOverlap_cluster(distance_map, watervector_energy, water, hash_spacing, 2.5);
     }
 
@@ -197,13 +205,29 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    std::sort(clusters.begin(), clusters.end());
+
+    std::filesystem::path root_path(output_file);
+
+    std::filesystem::path dir_path = root_path.parent_path();
+
+    if (!dir_path.empty() && !std::filesystem::exists(dir_path)) {
+        try {
+            std::filesystem::create_directories(dir_path);
+        } catch (const std::filesystem::filesystem_error& e) {
+            std::cerr << "Error creating directories: " << e.what() << '\n';
+            return 0; 
+        }
+    }
     
     for (int cluster_id : clusters) {
         if (cluster_map.find(cluster_id) != cluster_map.end()) { 
             monte_carlo_log_output.open(output_file + "_cluster_" + std::to_string(cluster_id) + ".log");
-            lowest_energy = INFINITY;       
+            lowest_energy = INFINITY;
+            double current_energy = INFINITY;       
             std::vector<int> current_cluster = {};
             int check = 0;
+
 
             std::cout << "-> Entering cluster " << cluster_id << std::endl;
             for (int index : cluster_map[cluster_id]) {
@@ -213,60 +237,97 @@ int main(int argc, char* argv[]){
             std::cout<< "* there are " << check << " waters in this cluster" << std::endl;
             std::vector<Water> temp_lowest_vector(check, Water({0.0, 0.0, 0.0}));
 
+            ActiveList active_list;
+            active_list.reserve(current_cluster.size());
+
+            for (auto& water : watervector_energy) {
+                water.set_value(false); 
+                water.clear_Overlap();
+            }
+
+            for (int index : current_cluster) {
+                active_list.add(index);
+            }
             int rep_count = 0;
+
             while(rep_count < total_reps){
                 //montecarlo randomization
-                bool addcount = iterate_singly(watervector_energy, current_cluster, gen);
-                if (!addcount)
-                {
-                    continue;
-                }
+                int changed_index = iterate_singly(watervector_energy, active_list, gen);
+
                 rep_count++;
 
                 //calculate energy of configuration
                 total_energy = 0;
                 // std::cout << total_energy << " ";
-                for (int j = current_cluster[0]; j < (current_cluster[0] + current_cluster.size()); j++){
+                for (int j : current_cluster) {
                     if (watervector_energy[j].get_value() == 1) {
-                        if(watervector_energy[j].getOverlap()){
-                            total_energy += 10;
-                        } else {
+
                             total_energy += watervector_energy[j].get_bfactor();
                             // total_energy += watervector_energy[i].constructive_interaction();
                             // if(watervector[i].constructive_interaction()!=0){
                             //     std::cout << "UH OH" << std::endl;
                             // }
-                        }
                     }
                 }
 
 
                 //metropolis
-                auto[temp, accepted] = metropolis(total_energy, lowest_energy);
-                lowest_energy = temp;
+                auto[temp, accepted] = metropolis(total_energy, current_energy);
                 
                 if(accepted) {
+                    current_energy = total_energy;
+                } else {
+                    bool current_state = watervector_energy[changed_index].get_value();
+                    
+                    if (current_state == true) {
+                        watervector_energy[changed_index].set_value(false);
+                        watervector_energy[changed_index].subtract_overlap_with_neighbors(watervector_energy, active_list);
+                    } else {
+                        watervector_energy[changed_index].set_value(true);
+                        watervector_energy[changed_index].add_overlap_with_neighbors(watervector_energy, active_list);
+                    }
+                }
+                if (current_energy < lowest_energy) {
+                    lowest_energy = current_energy;
                     std::copy(watervector_energy.begin() + current_cluster[0], watervector_energy.begin() + current_cluster[0] + current_cluster.size(), temp_lowest_vector.begin());
+
                 }
 
-                monte_carlo_log_output << rep_count << ", " << total_energy << ", " << lowest_energy << "\n";
+                monte_carlo_log_output << rep_count << ", " << total_energy << ", " << current_energy << ", " << lowest_energy << "\n";
 
-                if (rep_count % 1000 == 0 || rep_count == total_reps - 1) {
-                    double percent = ((double)(rep_count + 1) / total_reps) * 100.0;
-                    std::cout << "\r\033[K  Progress:  " << std::fixed << std::setprecision(1) << percent << "%" << std::flush;                }
+                if (rep_count % 1000 == 0 || rep_count == total_reps) {
+                    double percent = ((double)(rep_count) / total_reps) * 100.0;
+                    std::cout << "\r\033[K  Progress:  " << std::fixed << std::setprecision(1) << percent << "%" << std::flush;                
+                }
             }
             std::cout << std::endl;
 
             lowest_config_cluster.push_back({cluster_id, temp_lowest_vector});
             monte_carlo_log_output.close();
-            for(int i = 0; i < clusters.size(); i++) {
-                vectortopdb(std::get<1>(lowest_config_cluster[i]), output_file + "_cluster_" + std::to_string(std::get<0>(lowest_config_cluster[i])) + ".pdb", cluster_id);
-            }
+
 
             std::cout << "energy of lowest configuration for cluster " << cluster_id << " is " << lowest_energy << std::endl;
         }
         
     }
+    
+    std::string final_output_name = output_file + "_all_clusters.pdb";
+    std::ofstream combined_pdb_file(final_output_name);
+
+    if (!combined_pdb_file.is_open()) {
+        std::cerr << "Error: Could not open " << final_output_name << " for writing!\n";
+        return 0; 
+    }
+
+    for(int i = 0; i < lowest_config_cluster.size(); i++) {
+        
+        int current_cluster_id = std::get<0>(lowest_config_cluster[i]);
+        auto current_vector = std::get<1>(lowest_config_cluster[i]);
+        
+        vectortopdb(current_vector, combined_pdb_file, current_cluster_id);
+    }
+
+    combined_pdb_file.close();
 
     //from here we are randomizing
     // for(int z = 0; z < total_reps; z++) {

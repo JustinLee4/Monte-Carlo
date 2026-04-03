@@ -59,30 +59,42 @@ bool Water::get_value() const {
     return value;
 }
 
-void Water::setOverlap(bool new_isOverlapping) {
+void Water::setOverlap(int new_isOverlapping) {
     isOverlapping = new_isOverlapping;
 }
 
-bool Water::getOverlap() const {
+int Water::getOverlap() const {
     return isOverlapping;
 }
 
-void Water::flip_Overlap() {
-    isOverlapping = !isOverlapping;
+void Water::addOverlap() {
+    isOverlapping += 1;
 }
 
-void Water::add_neighbor(Water newNeighbor){
+void Water::subtractOverlap() {
+    isOverlapping -= 1;
+}
+
+void Water::clear_Overlap() {
+    isOverlapping = 0;
+}
+
+void Water::add_neighbor(int newNeighbor){
     nearby_water.push_back(newNeighbor);
 }
 
-void Water::overlap_with_neighbors(){
-    for (Water neighbor : nearby_water) {
-        neighbor.setOverlap(true);
+void Water::add_overlap_with_neighbors(std::vector<Water>& input_vec, ActiveList& active_list){
+    for (int neighbor_idx : nearby_water) {
+        input_vec[neighbor_idx].addOverlap();
+        active_list.remove(neighbor_idx);
     }
 }
 
-void Water::remove_overlap_with_neighbors() {
-    for (Water neighbor : nearby_water) {
-        neighbor.setOverlap(false);
+void Water::subtract_overlap_with_neighbors(std::vector<Water>& input_vec, ActiveList& active_list) {
+    for (int neighbor_idx : nearby_water) {
+        input_vec[neighbor_idx].subtractOverlap();
+        if (input_vec[neighbor_idx].getOverlap() == 0) {
+            active_list.add(neighbor_idx);
+        }
     } 
 }

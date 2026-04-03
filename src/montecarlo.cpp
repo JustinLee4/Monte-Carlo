@@ -8,28 +8,56 @@
 #include <tuple>
 #include <cmath>
 #include <math.h>
+#include <utility>
 
-bool iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices, std::mt19937& gen) {
+// std::pair<bool,int> iterate_singly(std::vector<Water> &input_vec, std::vector<int> const indices, std::mt19937& gen) {
 
-    std::uniform_int_distribution<int> distrib(0, indices.size()-1);
+//     std::uniform_int_distribution<int> distrib(0, indices.size()-1);
 
-    int random_num = distrib(gen);
+//     int random_num = distrib(gen);
 
-    int index = indices[random_num];
+//     int index = indices[random_num];
 
-    if(input_vec[index].getOverlap()) {
-        return false;
+//     bool is_on = input_vec[index].get_value();
+//     int overlaps = input_vec[index].getOverlap();
+
+//     if(is_on) {
+//         input_vec[index].set_value(false);
+//         input_vec[index].subtract_overlap_with_neighbors(input_vec);
+//         return {true, index};
+//     }
+//     else {
+//         if(overlaps == 0) {
+//             input_vec[index].set_value(true);
+//             input_vec[index].add_overlap_with_neighbors(input_vec);
+//             return {true, index};
+//         }
+//         else {
+//             return {false, index};
+//         }
+//     }
+// }
+
+// Returns the index that was modified
+int iterate_singly(std::vector<Water>& input_vec, ActiveList& active_list, std::mt19937& gen) {
+    
+    int index = active_list.get_random(gen);
+    
+    // Safety check in case the system completely locks up
+    if (index == -1) return -1; 
+
+    bool is_on = input_vec[index].get_value();
+
+    if(is_on) {
+        input_vec[index].set_value(false);
+        input_vec[index].subtract_overlap_with_neighbors(input_vec, active_list); 
+    }
+    else {
+        input_vec[index].set_value(true);
+        input_vec[index].add_overlap_with_neighbors(input_vec, active_list);
     }
 
-    bool old_value = input_vec[index].get_value();
-    input_vec[index].set_value(!old_value);
-
-    if(!old_value){
-        input_vec[index].overlap_with_neighbors();
-    } else {
-        input_vec[index].remove_overlap_with_neighbors();
-    }
-    return true;
+    return index;
 }
 
 
