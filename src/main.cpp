@@ -40,9 +40,9 @@ int main(int argc, char* argv[]){
         else if ((arg == "-e" || arg == "--energy") && i + 1 < argc) {
             input_energy_file = argv[++i];
         } 
-        else if ((arg == "-c" || arg == "--clusters") && i + 1 < argc) {
-            input_cluster_file = argv[++i];
-        }
+        // else if ((arg == "-c" || arg == "--clusters") && i + 1 < argc) {
+        //     input_cluster_file = argv[++i];
+        // }
         else if ((arg == "-o" || arg == "--out") && i + 1 < argc) {
             output_file = std::string("results/") + argv[++i];
         }
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]){
         }
     }
 
-    if ((input_protein_file.empty() || input_energy_file.empty() || input_cluster_file.empty() || output_file.empty())) {
+    if ((input_protein_file.empty() || input_energy_file.empty() || /*input_cluster_file.empty() ||*/ output_file.empty())) {
         std::cerr << "Error: Missing required arguments" << std::endl;
         std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out> -reps <total reps>" << std::endl;
         return 1;
@@ -156,15 +156,15 @@ int main(int argc, char* argv[]){
     std::tuple<std::vector<Water>, double, double, double, double, double, double> energy_tuple = pdbtovector_Waters(input_energy_file);
     std::vector<Water> watervector_energy = std::get<0>(energy_tuple);
 
-    std::tuple<std::vector<Water>, double, double, double, double, double, double> cluster_tuple = pdbtovector_Waters(input_cluster_file);
-    std::vector<Water> watervector_cluster = std::get<0>(cluster_tuple);
+    // std::tuple<std::vector<Water>, double, double, double, double, double, double> cluster_tuple = pdbtovector_Waters(input_cluster_file);
+    // std::vector<Water> watervector_cluster = std::get<0>(cluster_tuple);
 
-    if(watervector_cluster.size() != watervector_energy.size()) {
-        std::cout << "Error: Cluster file and Energy file not the same length" << std::endl;
-        std::cout << "Waters in cluster file: " << watervector_cluster.size() << std::endl;
-        std::cout << "Waters in energy file: " << watervector_energy.size() << std::endl;
-        return 0;
-    }
+    // if(watervector_cluster.size() != watervector_energy.size()) {
+    //     std::cout << "Error: Cluster file and Energy file not the same length" << std::endl;
+    //     std::cout << "Waters in cluster file: " << watervector_cluster.size() << std::endl;
+    //     std::cout << "Waters in energy file: " << watervector_energy.size() << std::endl;
+    //     return 0;
+    // }
 
     std::cout << "* total waters = " << watervector_energy.size() << std::endl;
 
@@ -174,7 +174,7 @@ int main(int argc, char* argv[]){
     //create hashmap based on distance - for use in overlaps
     std::unordered_map<GridKey, std::vector<int>> distance_map = buildSpatialGrid(watervector_energy, hash_spacing);
     //create hashmap based on clusters - to loop through
-    std::unordered_map<int, std::vector<int>> cluster_map = buildClusterMap(watervector_cluster);
+    std::unordered_map<int, std::vector<int>> cluster_map = buildClusterMap(watervector_energy);
 
 
     //use overlap hashmap to populate neighbors for all gridpoints

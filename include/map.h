@@ -24,8 +24,6 @@ namespace std {
     template <>
     struct hash<GridKey> {
         size_t operator()(const GridKey& k) const {
-            // A common way to combine hashes: use xor (^) and bit-shifting.
-            // This creates a good "hash" value from the three integers.
             return (
                 (std::hash<int>()(k.x) ^
                  (std::hash<int>()(k.y) << 1)) >> 1
@@ -55,12 +53,9 @@ buildSpatialGrid(std::vector<T> objects, double gridCellSize) {
 template<typename T>
 std::unordered_map<int, std::vector<int>> buildClusterMap(const std::vector<T>& objects) {
 
-    // The map now uses an 'int' (residue number) as the key
     std::unordered_map<int, std::vector<int>> cluster_map;
 
     for (int i = 0; i < objects.size(); ++i) {
-        // Assuming your Atom/Water class has a method to get the residue number.
-        // We cast it to an int so it works perfectly as a hash map key.
         int res_id = static_cast<int>(objects[i].get_resnumber()); 
         
         cluster_map[res_id].push_back(i);
