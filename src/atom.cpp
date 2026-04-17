@@ -83,6 +83,11 @@ void Water::add_neighbor(int newNeighbor){
     nearby_water.push_back(newNeighbor);
 }
 
+void Water::add_constructive_neighbor(int newNeighbor) {
+    constructive_water.push_back(newNeighbor);
+}
+
+
 void Water::add_overlap_with_neighbors(std::vector<Water>& input_vec, ActiveList& active_list){
     for (int neighbor_idx : nearby_water) {
         input_vec[neighbor_idx].addOverlap();

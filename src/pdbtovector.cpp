@@ -150,6 +150,8 @@ std::tuple<std::vector<Water>, double, double, double, double, double, double> p
 
     std::string line_string;
     
+    std::cout << "crash after entering pdbwaters" << std::endl;
+
     while (std::getline(infile, line_string)) {   
         // Check for ATOM or HETATM records
         bool is_atom = (line_string.substr(0, 4) == "ATOM");

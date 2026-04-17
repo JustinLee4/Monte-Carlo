@@ -120,6 +120,7 @@ class Water: public Atom {
     bool value = false;
     int isOverlapping = 0;
     std::vector<int> nearby_water = {};
+    std::vector<int> constructive_water = {};
 
 
     Water(std::array<double, 3> init_position, double init_b_factor = 0.0) 
@@ -143,6 +144,8 @@ class Water: public Atom {
     void clear_Overlap();
 
     void add_neighbor(int newNeighbor);
+
+    void add_constructive_neighbor(int newNeighbor);
 
     void add_overlap_with_neighbors(std::vector<Water>& input_vec, ActiveList& active_list);
 

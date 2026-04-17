@@ -91,6 +91,8 @@ void getOverlap_cluster(const std::unordered_map<GridKey, std::vector<int>>& gri
 
                         if ((distance <= pow(diameter+0.01,2)) && (distance > 0.0001)){
                             target.add_neighbor(neighborIndex);
+                        } else if((distance > pow(diameter+0.01,2)) && (distance <= 9)) {
+                            target.add_constructive_neighbor(neighborIndex);
                         }
                     }
                 }

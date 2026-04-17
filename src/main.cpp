@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <set>
 
 
 bool linux = true;
@@ -51,14 +52,14 @@ int main(int argc, char* argv[]){
         }     
         else {
             std::cerr << "Error: Unknown or incomplete argument '" << arg << "'" << std::endl;
-            std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out> -reps <total reps>" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -o <out> -reps <total reps>" << std::endl;
             return 1;
         }
     }
 
     if ((input_protein_file.empty() || input_energy_file.empty() || /*input_cluster_file.empty() ||*/ output_file.empty())) {
         std::cerr << "Error: Missing required arguments" << std::endl;
-        std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -c <clusters> -o <out> -reps <total reps>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " -p <pdb> -e <energy> -o <out> -reps <total reps>" << std::endl;
         return 1;
     }
 
@@ -114,7 +115,6 @@ int main(int argc, char* argv[]){
     std::cout << "--- Files ---" << std::endl;
     std::cout << "Input PDB:  " << input_protein_file << std::endl;
     std::cout << "Input energy file: " << input_energy_file << std::endl;
-    std::cout << "Input cluster file: " << input_cluster_file << std::endl;
     std::cout << "Output:     " << output_file << std::endl;
     std::cout << std::scientific;
     std::cout <<  "Total steps:  " << static_cast<double>(total_reps) << std::endl;
@@ -219,6 +219,8 @@ int main(int argc, char* argv[]){
             return 0; 
         }
     }
+
+    std::set<int> check_lowest_nearest_neighbors = {};
     
     for (int cluster_id : clusters) {
         if (cluster_map.find(cluster_id) != cluster_map.end()) { 
@@ -258,18 +260,27 @@ int main(int argc, char* argv[]){
 
                 //calculate energy of configuration
                 total_energy = 0;
+
+                std::set<int> test_neighbors_working = {};
+
                 // std::cout << total_energy << " ";
                 for (int j : current_cluster) {
                     if (watervector_energy[j].get_value() == 1) {
 
                             total_energy += watervector_energy[j].get_bfactor();
-                            // total_energy += watervector_energy[i].constructive_interaction();
-                            // if(watervector[i].constructive_interaction()!=0){
-                            //     std::cout << "UH OH" << std::endl;
-                            // }
+                            
+                            //constructive interaction
+                            for(int k : watervector_energy[j].constructive_water) {
+                                if(watervector_energy[k].get_value() == 1) {
+                                    total_energy -= 2.5; // each neighbor counts this twice, so two waters will have -5 kcal/mol energy added
+                                    
+                                    
+                                    // test_neighbors_working.insert(k + 1);
+                                
+                                }
+                            }
                     }
                 }
-
 
                 //metropolis
                 auto[temp, accepted] = metropolis(total_energy, current_energy);
@@ -291,6 +302,8 @@ int main(int argc, char* argv[]){
                     lowest_energy = current_energy;
                     std::copy(watervector_energy.begin() + current_cluster[0], watervector_energy.begin() + current_cluster[0] + current_cluster.size(), temp_lowest_vector.begin());
 
+                    // check_lowest_nearest_neighbors = test_neighbors_working;
+
                 }
 
                 monte_carlo_log_output << rep_count << ", " << total_energy << ", " << current_energy << ", " << lowest_energy << "\n";
@@ -305,6 +318,10 @@ int main(int argc, char* argv[]){
             lowest_config_cluster.push_back({cluster_id, temp_lowest_vector});
             monte_carlo_log_output.close();
 
+            // for(int i : check_lowest_nearest_neighbors) {
+            //     std::cout << i << " ";
+            // }
+            // std::cout << std::endl;
 
             std::cout << "energy of lowest configuration for cluster " << cluster_id << " is " << lowest_energy << std::endl;
         }
