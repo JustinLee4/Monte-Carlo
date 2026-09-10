@@ -83,4 +83,6 @@ void vectortopdb(const std::vector<T> &atomvector,
 //take a.pdb, append b.pdb, result c.pdb
 bool append_pdb_files(const std::string& filepath_1, const std::string& filepath_2, const std::string& output_path, int targetLine);
 
+void reindex_pdb(const std::string& temp_input_file, const std::string& final_output_file);
+
 #endif

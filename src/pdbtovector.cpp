@@ -245,3 +245,48 @@ bool append_pdb_files(const std::string& filepath_1, const std::string& filepath
 
     return true;
 }
+
+void reindex_pdb(const std::string& temp_input_file, const std::string& final_output_file) {
+    std::ifstream infile(temp_input_file);
+    std::ofstream outfile(final_output_file);
+
+    if (!infile.is_open() || !outfile.is_open()) {
+        std::cerr << "Error: Could not open files for reindexing.\n";
+        return;
+    }
+
+    std::string line;
+    int atom_count = 1;
+    int res_count = 1;
+
+    while (std::getline(infile, line)) {
+        // Only modify ATOM or HETATM lines that are long enough
+        if ((line.substr(0, 6) == "ATOM  " || line.substr(0, 6) == "HETATM") && line.length() >= 26) {
+            
+            // Cap at standard PDB limits
+            int z = (atom_count > 99999) ? 99999 : atom_count;
+            int r = (res_count > 9999) ? 9999 : res_count;
+
+            char atom_id_str[6];
+            char res_id_str[5];
+            
+            // Format to exact column widths (5 for atom, 4 for res)
+            std::snprintf(atom_id_str, sizeof(atom_id_str), "%5d", z);
+            std::snprintf(res_id_str, sizeof(res_id_str), "%4d", r);
+
+            // Replace characters in the PDB line (0-indexed columns 6-10 and 22-25)
+            line.replace(6, 5, atom_id_str);
+            line.replace(22, 4, res_id_str);
+
+            atom_count++;
+            res_count++;
+        }
+        outfile << line << "\n";
+    }
+
+    infile.close();
+    outfile.close();
+    
+    // Optional: Delete the temporary file when finished
+    std::remove(temp_input_file.c_str()); 
+}

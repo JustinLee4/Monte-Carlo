@@ -328,23 +328,46 @@ int main(int argc, char* argv[]){
         
     }
     
-    std::string final_output_name = output_file + "_all_clusters.pdb";
-    std::ofstream combined_pdb_file(final_output_name);
+    // std::string final_output_name = output_file + "_all_clusters.pdb";
+    // std::ofstream combined_pdb_file(final_output_name);
 
-    if (!combined_pdb_file.is_open()) {
-        std::cerr << "Error: Could not open " << final_output_name << " for writing!\n";
+    // if (!combined_pdb_file.is_open()) {
+    //     std::cerr << "Error: Could not open " << final_output_name << " for writing!\n";
+    //     return 0; 
+    // }
+
+    // for(int i = 0; i < lowest_config_cluster.size(); i++) {
+        
+    //     int current_cluster_id = std::get<0>(lowest_config_cluster[i]);
+    //     auto current_vector = std::get<1>(lowest_config_cluster[i]);
+        
+    //     vectortopdb(current_vector, combined_pdb_file, current_cluster_id);
+    // }
+
+    // combined_pdb_file.close();
+
+    std::string final_output_name = output_file + "_all_clusters.pdb";
+    std::string temp_output_name = output_file + "_temp.pdb";
+
+    std::ofstream temp_pdb_file(temp_output_name);
+
+    if (!temp_pdb_file.is_open()) {
+        std::cerr << "Error: Could not open " << temp_output_name << " for writing!\n";
         return 0; 
     }
 
+    // 1. Write the raw, unindexed vectors to the temporary file
     for(int i = 0; i < lowest_config_cluster.size(); i++) {
-        
         int current_cluster_id = std::get<0>(lowest_config_cluster[i]);
         auto current_vector = std::get<1>(lowest_config_cluster[i]);
         
-        vectortopdb(current_vector, combined_pdb_file, current_cluster_id);
+        vectortopdb(current_vector, temp_pdb_file, current_cluster_id);
     }
 
-    combined_pdb_file.close();
+    temp_pdb_file.close();
+
+    // 2. Reindex the file sequentially and write to the final destination
+    reindex_pdb(temp_output_name, final_output_name);
 
     //from here we are randomizing
     // for(int z = 0; z < total_reps; z++) {
