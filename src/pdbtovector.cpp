@@ -246,6 +246,18 @@ bool append_pdb_files(const std::string& filepath_1, const std::string& filepath
     return true;
 }
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <cstdio>
+
+std::string trim_whitespace(std::string s) {
+    if (s.empty()) return s;
+    s.erase(s.find_last_not_of(" ") + 1);
+    s.erase(0, s.find_first_not_of(" "));
+    return s;
+}
+
 void reindex_pdb(const std::string& temp_input_file, const std::string& final_output_file) {
     std::ifstream infile(temp_input_file);
     std::ofstream outfile(final_output_file);
@@ -257,36 +269,59 @@ void reindex_pdb(const std::string& temp_input_file, const std::string& final_ou
 
     std::string line;
     int atom_count = 1;
-    int res_count = 1;
+    
+    // Variables to track residue changes
+    int current_new_res_num = -1; 
+    std::string last_original_res_key = "";
 
     while (std::getline(infile, line)) {
-        // Only modify ATOM or HETATM lines that are long enough
+        // Check if the line is an ATOM or HETATM record
         if ((line.substr(0, 6) == "ATOM  " || line.substr(0, 6) == "HETATM") && line.length() >= 26) {
             
-            // Cap at standard PDB limits
+            std::string res_name = trim_whitespace(line.substr(17, 3));
+
+            // 1. Reindex Atom ID (Applies to all atoms)
             int z = (atom_count > 99999) ? 99999 : atom_count;
-            int r = (res_count > 9999) ? 9999 : res_count;
-
             char atom_id_str[6];
-            char res_id_str[5];
-            
-            // Format to exact column widths (5 for atom, 4 for res)
             std::snprintf(atom_id_str, sizeof(atom_id_str), "%5d", z);
-            std::snprintf(res_id_str, sizeof(res_id_str), "%4d", r);
-
-            // Replace characters in the PDB line (0-indexed columns 6-10 and 22-25)
             line.replace(6, 5, atom_id_str);
-            line.replace(22, 4, res_id_str);
-
             atom_count++;
-            res_count++;
+
+            // 2. Reindex Residue ID (Only for waters)
+            if (res_name == "HOH" || res_name == "WAT" || res_name == "SOL" || res_name == "H2O") {
+                
+                // Grab the Chain ID and Original Residue Number (cols 22-26) as a unique key
+                std::string current_original_res_key = line.substr(21, 5);
+
+                if (current_new_res_num == -1) {
+                    // First water encountered: set starting number based on its current value
+                    try {
+                        current_new_res_num = std::stoi(trim_whitespace(line.substr(22, 4)));
+                    } catch (...) {
+                        current_new_res_num = 1;
+                    }
+                    last_original_res_key = current_original_res_key;
+                } 
+                // Only increment if the original residue grouping changes
+                else if (current_original_res_key != last_original_res_key) {
+                    current_new_res_num++;
+                    last_original_res_key = current_original_res_key;
+                }
+
+                // Format and apply the new sequential residue number
+                int r = (current_new_res_num > 9999) ? 9999 : current_new_res_num;
+                char res_id_str[5];
+                std::snprintf(res_id_str, sizeof(res_id_str), "%4d", r);
+                line.replace(22, 4, res_id_str);
+            }
         }
+        
         outfile << line << "\n";
     }
 
     infile.close();
     outfile.close();
     
-    // Optional: Delete the temporary file when finished
+    // Uncomment this when you are ready to delete the temp file again
     std::remove(temp_input_file.c_str()); 
 }
